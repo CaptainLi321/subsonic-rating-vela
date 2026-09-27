@@ -1,0 +1,315 @@
+<template>
+  <div class="demo-page">
+    <!-- 状态行 -->
+    <div class="status-row">
+      <text class="status-dot {{connected ? 'dot-ok' : 'dot-bad'}}"></text>
+      <text class="status-text">{{statusText}}</text>
+    </div>
+
+    <!-- 歌曲信息 -->
+    <div class="song">
+      <marquee class="song-name" scrollamount="{{90}}" text-offset="{{90}}">{{songTitle}}</marquee>
+      <marquee class="singer-name" scrollamount="{{90}}" text-offset="{{90}}">{{songArtist}}</marquee>
+    </div>
+
+    <!-- 当前评分: 大字显示 -->
+    <div class="rating-show">
+      <text class="rating-num">{{currentRating > 0 ? currentRating : '--'}}</text>
+      <text class="rating-stars">{{ratingStarsText}}</text>
+    </div>
+
+    <!-- 大按钮评分区: 3行2列 -->
+    <div class="rate-grid">
+      <div class="rate-row" for="row in rateRows" tid="rowIdx">
+        <div class="rate-btn {{opt.isClear ? 'rate-clear-btn' : ''}}" for="opt in row" tid="value" @click="rate(opt.value)">
+          <text class="rate-btn-text {{opt.isClear ? 'rate-clear-text' : ''}}">{{opt.label}}</text>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+  .demo-page {
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #000;
+  }
+
+  .status-row {
+    width: 100%;
+    height: 46px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    margin-right: 8px;
+  }
+  .dot-ok { background-color: #34d399; }
+  .dot-bad { background-color: #f87171; }
+  .status-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 22px;
+  }
+
+  .song {
+    width: 100%;
+    height: 120px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .song-name {
+    width: 100%;
+    font-size: 40px;
+    color: #ffffff;
+    lines: 1;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+  .singer-name {
+    width: 100%;
+    font-size: 26px;
+    color: rgba(255, 255, 255, 0.8);
+    lines: 1;
+    text-overflow: ellipsis;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .rating-show {
+    width: 100%;
+    height: 64px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+  .rating-num {
+    font-size: 52px;
+    color: #f5b50a;
+    font-weight: bold;
+    margin-right: 18px;
+  }
+  .rating-stars {
+    font-size: 30px;
+    color: #f5b50a;
+    letter-spacing: 3px;
+  }
+
+  .rate-grid {
+    width: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .rate-row {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .rate-btn {
+    width: 196px;
+    height: 88px;
+    margin: 0 6px;
+    border-radius: 16px;
+    background-color: #1a2332;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #28344a;
+  }
+  .rate-clear-btn {
+    background-color: #7f1d1d;
+    border-color: #f87171;
+  }
+  .rate-btn-text {
+    color: #c0c8d4;
+    font-size: 44px;
+  }
+  .rate-clear-text {
+    color: #fca5a5;
+  }
+
+  @media (max-width: 212) {
+    .rate-btn {
+      width: 45%;
+      margin: 0 4px;
+    }
+    .rating-num { font-size: 48px; }
+  }
+</style>
+
+<script>
+  import vibrator from '@system.vibrator'
+  import subsonic from '../../common/scripts/subsonic'
+
+  var STAR_TEXT = ['☆☆☆☆☆', '★☆☆☆☆', '★★☆☆☆', '★★★☆☆', '★★★★☆', '★★★★★']
+  var STATIC_RATE_ROWS = [
+    [
+      { value: 1, label: '1', isClear: false },
+      { value: 2, label: '2', isClear: false }
+    ],
+    [
+      { value: 3, label: '3', isClear: false },
+      { value: 4, label: '4', isClear: false }
+    ],
+    [
+      { value: 5, label: '5', isClear: false },
+      { value: 0, label: '清除', isClear: true }
+    ]
+  ]
+
+  export default {
+    private: {
+      connected: false,
+      statusText: '连接中...',
+      songTitle: '暂无播放',
+      songArtist: '请在手机播放歌曲',
+      currentRating: 0,
+      ratingStarsText: STAR_TEXT[0],
+      rateRows: [],
+      songId: '',
+      config: null,
+      pollTimer: null,
+      refreshing: false,
+      destroyed: false,
+      lastSongId: ''
+    },
+
+    onInit() {
+      this.config = this.$app.$def.getConfig()
+      this.rateRows = STATIC_RATE_ROWS
+      this.refresh()
+    },
+
+    onReady() {
+      this.startPolling()
+    },
+
+    onHide() {
+      this.stopPolling()
+    },
+
+    onShow() {
+      this.refresh()
+      this.startPolling()
+    },
+
+    onDestroy() {
+      this.destroyed = true
+      this.stopPolling()
+    },
+
+    startPolling() {
+      var self = this
+      this.stopPolling()
+      this.pollTimer = setInterval(function () {
+        self.refresh()
+      }, 15000)
+    },
+
+    stopPolling() {
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer)
+        this.pollTimer = null
+      }
+    },
+
+    refresh() {
+      if (this.refreshing || this.destroyed) return
+      var self = this
+      if (!this.config || !this.config.serverUrl || !this.config.password) {
+        this.statusText = '配置缺失'
+        this.connected = false
+        return
+      }
+      this.refreshing = true
+      subsonic.getNowPlaying(this.config).then(function (song) {
+        // 曲目未变化: 直接结束, 不调 getSong 不刷新 UI (省 1 请求 + 免重绘)
+        if (song && song.id && song.id === self.lastSongId) {
+          self.refreshing = false
+          if (self.destroyed) return
+          self.connected = true
+          self.statusText = '正在播放'
+          return null
+        }
+        if (song && song.id) {
+          return subsonic.getSong(self.config, song.id).then(function (detail) {
+            if (detail) {
+              song.userRating = detail.userRating
+              song.title = detail.title || song.title
+              song.artist = detail.artist || song.artist
+            }
+            return song
+          })
+        }
+        return song
+      }).then(function (song) {
+        self.refreshing = false
+        if (self.destroyed || song === null) return
+        self.connected = true
+        self.statusText = '正在播放'
+        if (song) {
+          self.songId = song.id || ''
+          self.lastSongId = self.songId
+          self.songTitle = song.title || '未知歌曲'
+          self.songArtist = song.artist || '未知歌手'
+          self.currentRating = song.userRating || 0
+          self.ratingStarsText = STAR_TEXT[self.currentRating] || STAR_TEXT[0]
+          console.log('[subsonic] song:', self.songTitle, '-', self.songArtist, 'rating:', self.currentRating)
+        } else {
+          self.songId = ''
+          self.lastSongId = ''
+          self.songTitle = '暂无播放'
+          self.songArtist = '请在手机播放歌曲'
+          self.currentRating = 0
+          self.ratingStarsText = STAR_TEXT[0]
+          console.log('[subsonic] no song')
+        }
+      }).catch(function (err) {
+        self.refreshing = false
+        if (self.destroyed) return
+        self.connected = false
+        self.statusText = '连接失败'
+        console.error('[subsonic]', err && err.message ? err.message : String(err))
+      })
+    },
+
+    rate(rating) {
+      if (!this.songId) {
+        this.statusText = '当前无歌曲'
+        return
+      }
+      // 已评分的歌曲必须先清除才能重新评分
+      if (rating > 0 && this.currentRating > 0) {
+        this.statusText = '请先清除评分'
+        vibrator.vibrate({ mode: 'short' })
+        return
+      }
+      var self = this
+      var target = rating
+      this.refreshing = true
+      subsonic.setRating(this.config, this.songId, target).then(function () {
+        self.refreshing = false
+        if (self.destroyed) return
+        self.currentRating = target
+        self.ratingStarsText = STAR_TEXT[target] || STAR_TEXT[0]
+        self.statusText = target > 0 ? '已评分 ' + target + ' 星' : '已清除评分'
+        vibrator.vibrate({ mode: 'short' })
+      }).catch(function (err) {
+        self.refreshing = false
+        if (self.destroyed) return
+        self.statusText = '评分失败'
+        console.error('[subsonic] rate fail', err && err.message ? err.message : String(err))
+      })
+    }
+  }
+</script>

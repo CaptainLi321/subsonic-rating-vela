@@ -1,0 +1,25 @@
+<script>
+  /**
+   * 应用入口 - Subsonic 手表遥控器
+   * 凭据与服务端设置从 config.js 读取
+   */
+  import config from './common/scripts/config'
+
+  export default {
+    onCreate() {
+      console.info('[app] onCreate')
+    },
+    onShow() {
+      console.info('[app] onShow')
+    },
+    onDestroy() {
+      console.info('[app] onDestroy')
+    },
+
+    defaultConfig: config,
+
+    getConfig() {
+      return this.defaultConfig
+    }
+  }
+</script>

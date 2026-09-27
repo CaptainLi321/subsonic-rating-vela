@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+build/
+dist/
+*.debug.rpk
+*.release.rpk
+.temp_*
+
+# Private signing certificates and keys
+sign/
+*.pem
+*.key
+*.p12
+*.rpk
+
+# Private credentials and server configurations
+src/common/scripts/config.js
+src/common/scripts/secret.js
+
+# IDE and tool temp files
+.omo/
+.reasonix/
+.vscode/
+.idea/
+*.log

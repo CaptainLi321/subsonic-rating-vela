@@ -1,0 +1,30 @@
+{
+  "package": "com.captainli.subsonic",
+  "name": "音乐遥控",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minAPILevel": 1,
+  "icon": "/common/images/logo.png",
+  "deviceTypeList": ["watch"],
+  "features": [
+    { "name": "system.fetch" },
+    { "name": "system.vibrator" },
+    { "name": "system.app" }
+  ],
+  "config": {
+    "logLevel": "log",
+    "designWidth": "device-width",
+    "background": {
+      "features": ["system.fetch"]
+    }
+  },
+  "display": {
+    "backgroundColor": "#000000"
+  },
+  "router": {
+    "entry": "pages/index",
+    "pages": {
+      "pages/index": { "component": "index" }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "subsonic-remote",
+  "version": "1.0.0",
+  "description": "Redmi Watch 6 Subsonic 遥控器 - 显示正在播放歌曲并评分",
+  "license": "GPL-3.0-or-later",
+  "author": "captainli321",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/captainli321/subsonic-rating-vela.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "aiot build",
+    "release": "aiot release --drop-console=true",
+    "start": "aiot start"
+  },
+  "devDependencies": {
+    "aiot-toolkit": "^2.0.5"
+  }
+}
